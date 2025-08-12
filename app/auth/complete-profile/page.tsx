@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -14,7 +14,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2, User, Phone, MapPin, AlertTriangle } from "lucide-react"
 
 export default function CompleteProfile() {
-  const { data: session, update } = useSession()
+  const { data: session, update, status } = useSession()
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
@@ -26,6 +26,66 @@ export default function CompleteProfile() {
     emergencyContactName: "",
     emergencyContactPhone: "",
   })
+
+  useEffect(() => {
+    const loadUserData = async () => {
+      if (status === "loading") return
+
+      if (status === "unauthenticated") {
+        router.push("/auth/signin")
+        return
+      }
+
+      if (session?.user) {
+        // Load any stored signup data
+        const storedData = localStorage.getItem("pendingUserData")
+        if (storedData) {
+          try {
+            const userData = JSON.parse(storedData)
+            setFormData((prev) => ({
+              ...prev,
+              firstName: userData.firstName || "",
+              lastName: userData.lastName || "",
+              phone: userData.phone || "",
+              address: userData.address || "",
+            }))
+            // Clear stored data after loading
+            localStorage.removeItem("pendingUserData")
+          } catch (error) {
+            console.error("Error loading stored user data:", error)
+          }
+        }
+
+        // Check if profile is already completed
+        try {
+          const response = await fetch("/api/user/profile")
+          if (response.ok) {
+            const { data } = await response.json()
+            if (data?.profile_completed) {
+              router.push("/dashboard")
+              return
+            }
+
+            // Load existing profile data if any
+            if (data) {
+              setFormData({
+                firstName: data.first_name || "",
+                lastName: data.last_name || "",
+                phone: data.phone || "",
+                address: data.address || "",
+                emergencyContactName: data.emergency_contact_name || "",
+                emergencyContactPhone: data.emergency_contact_phone || "",
+              })
+            }
+          }
+        } catch (error) {
+          console.error("Error fetching profile:", error)
+        }
+      }
+    }
+
+    loadUserData()
+  }, [session, status, router])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -65,6 +125,14 @@ export default function CompleteProfile() {
       ...formData,
       [e.target.name]: e.target.value,
     })
+  }
+
+  if (status === "loading") {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    )
   }
 
   if (!session) {

@@ -1,5 +1,7 @@
 "use client"
 
+import type React from "react"
+
 import { useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -7,12 +9,13 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Car, Mail, Lock, User, Phone, MapPin } from 'lucide-react'
+import { Car, Mail, User, Phone, MapPin } from "lucide-react"
+import { signIn } from "next-auth/react"
 import { useRouter } from "next/navigation"
 
 export default function SignUpPage() {
   const router = useRouter()
-  const [step, setStep] = useState(1) // 1: signup form, 2: verification code
+  const [step, setStep] = useState(1) // 1: signup form, 2: email sent confirmation
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
@@ -21,17 +24,12 @@ export default function SignUpPage() {
     firstName: "",
     lastName: "",
     email: "",
-    password: "",
-    confirmPassword: "",
     phone: "",
     address: "",
   })
 
-  const [verificationCode, setVerificationCode] = useState("")
-  const [sentCode, setSentCode] = useState("")
-
   const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }))
+    setFormData((prev) => ({ ...prev, [field]: value }))
     setError("")
   }
 
@@ -44,14 +42,6 @@ export default function SignUpPage() {
       setError("Please enter a valid email address")
       return false
     }
-    if (!formData.password || formData.password.length < 6) {
-      setError("Password must be at least 6 characters long")
-      return false
-    }
-    if (formData.password !== formData.confirmPassword) {
-      setError("Passwords do not match")
-      return false
-    }
     if (!formData.phone) {
       setError("Please enter your phone number")
       return false
@@ -61,30 +51,36 @@ export default function SignUpPage() {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!validateForm()) return
 
     setLoading(true)
     setError("")
 
     try {
-      // Simulate API call to create account and send verification code
-      await new Promise(resolve => setTimeout(resolve, 1500))
-      
-      // Generate a mock verification code
-      const code = Math.floor(100000 + Math.random() * 900000).toString()
-      setSentCode(code)
-      
-      setSuccess(`Verification code sent to ${formData.email}`)
-      setStep(2)
-      
-      // In a real app, you would make an API call here:
-      // const response = await fetch('/api/auth/signup', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(formData)
-      // })
-      
+      // Store user data in localStorage temporarily for profile completion
+      localStorage.setItem(
+        "pendingUserData",
+        JSON.stringify({
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          phone: formData.phone,
+          address: formData.address,
+        }),
+      )
+
+      // Use NextAuth email sign-in which will send verification email
+      const result = await signIn("email", {
+        email: formData.email,
+        redirect: false,
+      })
+
+      if (result?.error) {
+        setError("Failed to send verification email. Please try again.")
+      } else {
+        setSuccess(`Verification email sent to ${formData.email}`)
+        setStep(2)
+      }
     } catch (err) {
       setError("Failed to create account. Please try again.")
     } finally {
@@ -92,49 +88,23 @@ export default function SignUpPage() {
     }
   }
 
-  const handleVerifyCode = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    if (!verificationCode) {
-      setError("Please enter the verification code")
-      return
-    }
-
+  const resendEmail = async () => {
     setLoading(true)
     setError("")
 
     try {
-      // Simulate API call to verify code
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      // Check if code matches (in real app, this would be server-side)
-      if (verificationCode === sentCode) {
-        setSuccess("Account verified successfully!")
-        
-        // Simulate login and redirect
-        setTimeout(() => {
-          router.push("/dashboard")
-        }, 1500)
-      } else {
-        setError("Invalid verification code. Please try again.")
-      }
-      
-    } catch (err) {
-      setError("Verification failed. Please try again.")
-    } finally {
-      setLoading(false)
-    }
-  }
+      const result = await signIn("email", {
+        email: formData.email,
+        redirect: false,
+      })
 
-  const resendCode = async () => {
-    setLoading(true)
-    try {
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      const newCode = Math.floor(100000 + Math.random() * 900000).toString()
-      setSentCode(newCode)
-      setSuccess("New verification code sent!")
+      if (result?.error) {
+        setError("Failed to resend email. Please try again.")
+      } else {
+        setSuccess("Verification email sent again!")
+      }
     } catch (err) {
-      setError("Failed to resend code")
+      setError("Failed to resend email")
     } finally {
       setLoading(false)
     }
@@ -150,7 +120,7 @@ export default function SignUpPage() {
           </Link>
           <div className="flex items-center gap-4">
             <span className="text-sm text-gray-600">Already have an account?</span>
-            <Link href="/login">
+            <Link href="/auth/signin">
               <Button variant="outline">Log In</Button>
             </Link>
           </div>
@@ -163,9 +133,7 @@ export default function SignUpPage() {
             <>
               <CardHeader className="text-center">
                 <CardTitle className="text-2xl">Create Your Account</CardTitle>
-                <CardDescription>
-                  Join ZooSchool to start organizing carpools with other parents
-                </CardDescription>
+                <CardDescription>Join ZooSchool to start organizing carpools with other parents</CardDescription>
               </CardHeader>
               <form onSubmit={handleSignUp}>
                 <CardContent className="space-y-4">
@@ -174,7 +142,7 @@ export default function SignUpPage() {
                       <AlertDescription>{error}</AlertDescription>
                     </Alert>
                   )}
-                  
+
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="firstName">First Name</Label>
@@ -251,38 +219,6 @@ export default function SignUpPage() {
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="password">Password</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
-                      <Input
-                        id="password"
-                        type="password"
-                        placeholder="Create a secure password"
-                        value={formData.password}
-                        onChange={(e) => handleInputChange("password", e.target.value)}
-                        className="pl-10"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="confirmPassword">Confirm Password</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
-                      <Input
-                        id="confirmPassword"
-                        type="password"
-                        placeholder="Confirm your password"
-                        value={formData.confirmPassword}
-                        onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
-                        className="pl-10"
-                        required
-                      />
-                    </div>
-                  </div>
-
                   <div className="text-xs text-gray-500">
                     By creating an account, you agree to our{" "}
                     <Link href="/terms" className="text-emerald-600 hover:underline">
@@ -295,12 +231,8 @@ export default function SignUpPage() {
                   </div>
                 </CardContent>
                 <CardFooter>
-                  <Button 
-                    type="submit" 
-                    className="w-full bg-emerald-600 hover:bg-emerald-700" 
-                    disabled={loading}
-                  >
-                    {loading ? "Creating Account..." : "Create Account"}
+                  <Button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700" disabled={loading}>
+                    {loading ? "Sending Verification Email..." : "Create Account"}
                   </Button>
                 </CardFooter>
               </form>
@@ -308,78 +240,59 @@ export default function SignUpPage() {
           ) : (
             <>
               <CardHeader className="text-center">
-                <CardTitle className="text-2xl">Verify Your Email</CardTitle>
+                <CardTitle className="text-2xl">Check Your Email</CardTitle>
                 <CardDescription>
-                  We've sent a 6-digit verification code to<br />
+                  We've sent a verification link to
+                  <br />
                   <strong>{formData.email}</strong>
                 </CardDescription>
               </CardHeader>
-              <form onSubmit={handleVerifyCode}>
-                <CardContent className="space-y-4">
-                  {error && (
-                    <Alert variant="destructive">
-                      <AlertDescription>{error}</AlertDescription>
-                    </Alert>
-                  )}
-                  
-                  {success && (
-                    <Alert>
-                      <AlertDescription className="text-emerald-600">{success}</AlertDescription>
-                    </Alert>
-                  )}
+              <CardContent className="space-y-4">
+                {error && (
+                  <Alert variant="destructive">
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                )}
 
-                  <div className="space-y-2">
-                    <Label htmlFor="code">Verification Code</Label>
-                    <Input
-                      id="code"
-                      type="text"
-                      placeholder="Enter 6-digit code"
-                      value={verificationCode}
-                      onChange={(e) => setVerificationCode(e.target.value)}
-                      className="text-center text-lg tracking-widest"
-                      maxLength={6}
-                      required
-                    />
-                  </div>
+                {success && (
+                  <Alert>
+                    <AlertDescription className="text-emerald-600">{success}</AlertDescription>
+                  </Alert>
+                )}
 
-                  <div className="text-center">
-                    <p className="text-sm text-gray-600 mb-2">
-                      Didn't receive the code?
+                <div className="text-center space-y-4">
+                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <Mail className="h-12 w-12 text-blue-600 mx-auto mb-2" />
+                    <p className="text-sm text-gray-600">
+                      Click the verification link in your email to complete your account setup.
                     </p>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      onClick={resendCode}
-                      disabled={loading}
-                      className="text-emerald-600 hover:text-emerald-700"
-                    >
-                      Resend Code
-                    </Button>
                   </div>
 
-                  {/* Development helper - remove in production */}
-                  <div className="p-3 bg-yellow-50 border border-yellow-200 rounded text-xs">
-                    <strong>Development Mode:</strong> Use code <code className="bg-yellow-100 px-1 rounded">{sentCode}</code>
+                  <div className="text-sm text-gray-600">
+                    <p className="mb-2">Didn't receive the email?</p>
+                    <ul className="text-xs space-y-1 mb-4">
+                      <li>• Check your spam/junk folder</li>
+                      <li>• Make sure you entered the correct email</li>
+                      <li>• Wait a few minutes for delivery</li>
+                    </ul>
                   </div>
-                </CardContent>
-                <CardFooter className="flex flex-col gap-2">
-                  <Button 
-                    type="submit" 
-                    className="w-full bg-emerald-600 hover:bg-emerald-700" 
-                    disabled={loading}
-                  >
-                    {loading ? "Verifying..." : "Verify Email"}
-                  </Button>
+
                   <Button
                     type="button"
-                    variant="ghost"
-                    onClick={() => setStep(1)}
-                    className="w-full"
+                    variant="outline"
+                    onClick={resendEmail}
+                    disabled={loading}
+                    className="w-full bg-transparent"
                   >
-                    Back to Sign Up
+                    {loading ? "Sending..." : "Resend Verification Email"}
                   </Button>
-                </CardFooter>
-              </form>
+                </div>
+              </CardContent>
+              <CardFooter>
+                <Button type="button" variant="ghost" onClick={() => setStep(1)} className="w-full">
+                  Back to Sign Up
+                </Button>
+              </CardFooter>
             </>
           )}
         </Card>
