@@ -2,70 +2,33 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useState } from "react"
+import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Loader2, Car } from "lucide-react"
+import { ArrowLeft, Mail, Lock } from "lucide-react"
 
-interface FormData {
-  email: string
-  password: string
-}
-
-export default function LoginPage() {
-  const [formData, setFormData] = useState<FormData>({
+export default function Login() {
+  const router = useRouter()
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState("")
+  const [formData, setFormData] = useState({
     email: "",
     password: "",
   })
-  const [error, setError] = useState("")
-  const [success, setSuccess] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
-  const router = useRouter()
-  const searchParams = useSearchParams()
 
-  useEffect(() => {
-    const message = searchParams.get("message")
-    if (message) {
-      setSuccess(message)
-    }
-  }, [searchParams])
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }))
-  }
-
-  const validateForm = (): string | null => {
-    if (!formData.email.trim()) return "Email is required"
-    if (!formData.password) return "Password is required"
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(formData.email)) return "Please enter a valid email address"
-
-    return null
+    setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError("")
-    setSuccess("")
-
-    // Validate form
-    const validationError = validateForm()
-    if (validationError) {
-      setError(validationError)
-      return
-    }
-
     setIsLoading(true)
+    setError("")
 
     try {
       const response = await fetch("/api/auth/login", {
@@ -73,117 +36,108 @@ export default function LoginPage() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          email: formData.email.trim(),
-          password: formData.password,
-        }),
+        body: JSON.stringify(formData),
       })
 
       const data = await response.json()
 
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to sign in")
-      }
-
-      setSuccess("Login successful! Redirecting to dashboard...")
-      setTimeout(() => {
+      if (response.ok) {
         router.push("/dashboard")
-      }, 1500)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "An unexpected error occurred")
+      } else {
+        setError(data.error || "Failed to sign in")
+      }
+    } catch (error) {
+      setError("Something went wrong. Please try again.")
     } finally {
       setIsLoading(false)
     }
   }
 
+  const handleTestAccount = () => {
+    setFormData({
+      email: "test@example.com",
+      password: "password123",
+    })
+  }
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div className="text-center">
-          <Link href="/" className="flex items-center justify-center gap-2 mb-6">
-            <Car className="h-8 w-8 text-emerald-600" />
-            <span className="text-2xl font-bold text-gray-900">ZooSchool</span>
-          </Link>
-          <h2 className="text-3xl font-bold text-gray-900">Welcome back</h2>
-          <p className="mt-2 text-sm text-gray-600">Sign in to your account</p>
-        </div>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-emerald-100 p-4">
+      <div className="w-full max-w-md">
+        <Link href="/" className="inline-flex items-center text-sm text-gray-600 hover:text-gray-900 mb-6">
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Back to home
+        </Link>
 
         <Card>
-          <CardHeader>
-            <CardTitle>Sign In</CardTitle>
-            <CardDescription>Enter your email and password to access your account</CardDescription>
+          <CardHeader className="text-center">
+            <CardTitle className="text-2xl font-bold">Welcome back</CardTitle>
+            <CardDescription>Sign in to your ZooSchool Carpool account</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
-              {error && (
-                <Alert variant="destructive">
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
-
-              {success && (
-                <Alert>
-                  <AlertDescription className="text-green-600">{success}</AlertDescription>
-                </Alert>
-              )}
-
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  required
-                  value={formData.email}
-                  onChange={handleChange}
-                  disabled={isLoading}
-                  placeholder="john@example.com"
-                />
+                <div className="relative">
+                  <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                  <Input
+                    id="email"
+                    name="email"
+                    type="email"
+                    placeholder="Enter your email"
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    className="pl-10"
+                    required
+                    disabled={isLoading}
+                  />
+                </div>
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  name="password"
-                  type="password"
-                  required
-                  value={formData.password}
-                  onChange={handleChange}
-                  disabled={isLoading}
-                  placeholder="Enter your password"
-                />
+                <div className="relative">
+                  <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                  <Input
+                    id="password"
+                    name="password"
+                    type="password"
+                    placeholder="Enter your password"
+                    value={formData.password}
+                    onChange={handleInputChange}
+                    className="pl-10"
+                    required
+                    disabled={isLoading}
+                  />
+                </div>
               </div>
 
-              <div className="flex items-center justify-between">
-                <Link href="/forgot-password" className="text-sm text-emerald-600 hover:text-emerald-500">
-                  Forgot your password?
-                </Link>
-              </div>
+              {error && (
+                <div className="bg-red-50 text-red-700 p-3 rounded-md text-sm border border-red-200">{error}</div>
+              )}
 
-              <Button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700" disabled={isLoading}>
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Signing In...
-                  </>
-                ) : (
-                  "Sign In"
-                )}
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? "Signing in..." : "Sign in"}
               </Button>
             </form>
 
-            <div className="mt-6 text-center">
-              <p className="text-sm text-gray-600">
-                Don't have an account?{" "}
-                <Link href="/signup" className="font-medium text-emerald-600 hover:text-emerald-500">
-                  Sign up
-                </Link>
-              </p>
+            <div className="mt-4">
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full bg-transparent"
+                onClick={handleTestAccount}
+                disabled={isLoading}
+              >
+                Use Test Account
+              </Button>
+              <p className="text-xs text-gray-500 text-center mt-2">Email: test@example.com | Password: password123</p>
             </div>
 
-            <div className="mt-4 text-center">
-              <p className="text-xs text-gray-500">Test account: test@example.com / password123</p>
+            <div className="text-center text-sm text-gray-600 mt-4">
+              Don't have an account?{" "}
+              <Link href="/signup" className="text-blue-600 hover:underline">
+                Sign up
+              </Link>
             </div>
           </CardContent>
         </Card>
