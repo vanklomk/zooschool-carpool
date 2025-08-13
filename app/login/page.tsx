@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
@@ -26,6 +25,8 @@ export default function LoginPage() {
     setIsLoading(true)
     setError("")
 
+    console.log("Submitting login form...")
+
     try {
       const response = await fetch("/api/auth/simple-login", {
         method: "POST",
@@ -36,14 +37,17 @@ export default function LoginPage() {
       })
 
       const data = await response.json()
+      console.log("Login response:", data)
 
       if (!response.ok) {
-        throw new Error(data.error || "Failed to sign in")
+        throw new Error(data.error || data.details || "Failed to sign in")
       }
 
+      console.log("Login successful, redirecting to dashboard...")
       // Redirect to dashboard on successful login
       router.push("/dashboard")
     } catch (error) {
+      console.error("Login error:", error)
       setError(error instanceof Error ? error.message : "Failed to sign in. Please try again.")
     } finally {
       setIsLoading(false)

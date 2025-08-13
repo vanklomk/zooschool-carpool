@@ -8,6 +8,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { email, password } = body
 
+    console.log("Login attempt for:", email)
+
     if (!email || !password) {
       return NextResponse.json({ error: "Email and password are required" }, { status: 400 })
     }
@@ -16,12 +18,19 @@ export async function POST(request: NextRequest) {
     const { data: user, error } = await supabaseAdmin.from("users").select("*").eq("email", email).single()
 
     if (error || !user) {
+      console.log("User not found:", email)
+      return NextResponse.json({ error: "Invalid email or password" }, { status: 401 })
+    }
+
+    if (!user.password_hash) {
+      console.log("User has no password hash:", email)
       return NextResponse.json({ error: "Invalid email or password" }, { status: 401 })
     }
 
     // Check password
     const isValidPassword = await bcrypt.compare(password, user.password_hash)
     if (!isValidPassword) {
+      console.log("Invalid password for:", email)
       return NextResponse.json({ error: "Invalid email or password" }, { status: 401 })
     }
 
@@ -29,6 +38,8 @@ export async function POST(request: NextRequest) {
     const token = jwt.sign({ userId: user.id, email: user.email }, process.env.NEXTAUTH_SECRET || "fallback-secret", {
       expiresIn: "7d",
     })
+
+    console.log("Login successful for:", email)
 
     // Create response with cookie
     const response = NextResponse.json({
@@ -53,6 +64,12 @@ export async function POST(request: NextRequest) {
     return response
   } catch (error) {
     console.error("Login error:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    return NextResponse.json(
+      {
+        error: "Internal server error",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 },
+    )
   }
 }

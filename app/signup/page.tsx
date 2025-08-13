@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
@@ -32,6 +31,8 @@ export default function SignUpPage() {
     setError("")
     setSuccess("")
 
+    console.log("Submitting signup form...")
+
     try {
       const response = await fetch("/api/auth/simple-signup", {
         method: "POST",
@@ -42,9 +43,10 @@ export default function SignUpPage() {
       })
 
       const data = await response.json()
+      console.log("Signup response:", data)
 
       if (!response.ok) {
-        throw new Error(data.error || "Failed to create account")
+        throw new Error(data.error || data.details || "Failed to create account")
       }
 
       setSuccess("Account created successfully! Redirecting to login...")
@@ -52,6 +54,7 @@ export default function SignUpPage() {
         router.push("/login")
       }, 2000)
     } catch (error) {
+      console.error("Signup error:", error)
       setError(error instanceof Error ? error.message : "Failed to create account. Please try again.")
     } finally {
       setIsLoading(false)
