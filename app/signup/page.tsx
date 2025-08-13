@@ -1,6 +1,7 @@
 "use client"
 
 import type React from "react"
+
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
@@ -11,27 +12,45 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2 } from "lucide-react"
 
-export default function SignUpPage() {
+export default function SignupPage() {
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
     email: "",
     password: "",
+    confirmPassword: "",
     phone: "",
-    address: "",
   })
-  const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
+    })
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setIsLoading(true)
     setError("")
     setSuccess("")
+    setIsLoading(true)
 
-    console.log("Submitting signup form...")
+    // Validation
+    if (formData.password !== formData.confirmPassword) {
+      setError("Passwords do not match")
+      setIsLoading(false)
+      return
+    }
+
+    if (formData.password.length < 6) {
+      setError("Password must be at least 6 characters long")
+      setIsLoading(false)
+      return
+    }
 
     try {
       const response = await fetch("/api/auth/simple-signup", {
@@ -39,48 +58,43 @@ export default function SignUpPage() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          password: formData.password,
+          phone: formData.phone,
+        }),
       })
 
       const data = await response.json()
-      console.log("Signup response:", data)
 
       if (!response.ok) {
-        throw new Error(data.error || data.details || "Failed to create account")
+        throw new Error(data.error || "Failed to create account")
       }
 
       setSuccess("Account created successfully! Redirecting to login...")
       setTimeout(() => {
         router.push("/login")
       }, 2000)
-    } catch (error) {
-      console.error("Signup error:", error)
-      setError(error instanceof Error ? error.message : "Failed to create account. Please try again.")
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred")
     } finally {
       setIsLoading(false)
     }
   }
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData((prev) => ({
-      ...prev,
-      [e.target.name]: e.target.value,
-    }))
-  }
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
+        <CardHeader>
           <CardTitle className="text-2xl font-bold text-center">Create Account</CardTitle>
-          <CardDescription className="text-center">
-            Join ZooSchool to start carpooling with other families
-          </CardDescription>
+          <CardDescription className="text-center">Join ZooSchool Carpool to start organizing rides</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
+              <div>
                 <Label htmlFor="firstName">First Name</Label>
                 <Input
                   id="firstName"
@@ -92,7 +106,7 @@ export default function SignUpPage() {
                   disabled={isLoading}
                 />
               </div>
-              <div className="space-y-2">
+              <div>
                 <Label htmlFor="lastName">Last Name</Label>
                 <Input
                   id="lastName"
@@ -106,7 +120,7 @@ export default function SignUpPage() {
               </div>
             </div>
 
-            <div className="space-y-2">
+            <div>
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
@@ -119,41 +133,39 @@ export default function SignUpPage() {
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                required
-                minLength={6}
-                value={formData.password}
-                onChange={handleChange}
-                disabled={isLoading}
-              />
-              <p className="text-sm text-gray-500">Must be at least 6 characters</p>
-            </div>
-
-            <div className="space-y-2">
+            <div>
               <Label htmlFor="phone">Phone Number</Label>
               <Input
                 id="phone"
                 name="phone"
                 type="tel"
-                required
                 value={formData.phone}
                 onChange={handleChange}
                 disabled={isLoading}
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="address">Address (Optional)</Label>
+            <div>
+              <Label htmlFor="password">Password</Label>
               <Input
-                id="address"
-                name="address"
-                type="text"
-                value={formData.address}
+                id="password"
+                name="password"
+                type="password"
+                required
+                value={formData.password}
+                onChange={handleChange}
+                disabled={isLoading}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="confirmPassword">Confirm Password</Label>
+              <Input
+                id="confirmPassword"
+                name="confirmPassword"
+                type="password"
+                required
+                value={formData.confirmPassword}
                 onChange={handleChange}
                 disabled={isLoading}
               />
@@ -167,7 +179,7 @@ export default function SignUpPage() {
 
             {success && (
               <Alert>
-                <AlertDescription className="text-green-600">{success}</AlertDescription>
+                <AlertDescription>{success}</AlertDescription>
               </Alert>
             )}
 
@@ -186,7 +198,7 @@ export default function SignUpPage() {
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
               Already have an account?{" "}
-              <Link href="/login" className="font-medium text-emerald-600 hover:text-emerald-500">
+              <Link href="/login" className="font-medium text-blue-600 hover:text-blue-500">
                 Sign in
               </Link>
             </p>

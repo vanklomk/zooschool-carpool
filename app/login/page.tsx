@@ -1,6 +1,7 @@
 "use client"
 
 import type React from "react"
+
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
@@ -16,16 +17,23 @@ export default function LoginPage() {
     email: "",
     password: "",
   })
-  const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
+  const [success, setSuccess] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
+    })
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setIsLoading(true)
     setError("")
-
-    console.log("Submitting login form...")
+    setSuccess("")
+    setIsLoading(true)
 
     try {
       const response = await fetch("/api/auth/simple-login", {
@@ -33,44 +41,39 @@ export default function LoginPage() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+        }),
       })
 
       const data = await response.json()
-      console.log("Login response:", data)
 
       if (!response.ok) {
-        throw new Error(data.error || data.details || "Failed to sign in")
+        throw new Error(data.error || "Failed to login")
       }
 
-      console.log("Login successful, redirecting to dashboard...")
-      // Redirect to dashboard on successful login
-      router.push("/dashboard")
-    } catch (error) {
-      console.error("Login error:", error)
-      setError(error instanceof Error ? error.message : "Failed to sign in. Please try again.")
+      setSuccess("Login successful! Redirecting to dashboard...")
+      setTimeout(() => {
+        router.push("/dashboard")
+      }, 1500)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred")
     } finally {
       setIsLoading(false)
     }
   }
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData((prev) => ({
-      ...prev,
-      [e.target.name]: e.target.value,
-    }))
-  }
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">Welcome Back</CardTitle>
-          <CardDescription className="text-center">Sign in to your ZooSchool account</CardDescription>
+        <CardHeader>
+          <CardTitle className="text-2xl font-bold text-center">Sign In</CardTitle>
+          <CardDescription className="text-center">Welcome back to ZooSchool Carpool</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
+            <div>
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
@@ -83,7 +86,7 @@ export default function LoginPage() {
               />
             </div>
 
-            <div className="space-y-2">
+            <div>
               <Label htmlFor="password">Password</Label>
               <Input
                 id="password"
@@ -102,6 +105,12 @@ export default function LoginPage() {
               </Alert>
             )}
 
+            {success && (
+              <Alert>
+                <AlertDescription>{success}</AlertDescription>
+              </Alert>
+            )}
+
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? (
                 <>
@@ -117,10 +126,16 @@ export default function LoginPage() {
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
               Don't have an account?{" "}
-              <Link href="/signup" className="font-medium text-emerald-600 hover:text-emerald-500">
-                Sign up
+              <Link href="/signup" className="font-medium text-blue-600 hover:text-blue-500">
+                Create one
               </Link>
             </p>
+          </div>
+
+          <div className="mt-4 text-center">
+            <Link href="/forgot-password" className="text-sm text-blue-600 hover:text-blue-500">
+              Forgot your password?
+            </Link>
           </div>
         </CardContent>
       </Card>

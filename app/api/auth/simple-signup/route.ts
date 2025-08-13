@@ -1,21 +1,26 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { supabaseAdmin } from "@/lib/supabase"
 import bcrypt from "bcryptjs"
+import { createClient } from "@supabase/supabase-js"
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+
+const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false,
+  },
+})
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { firstName, lastName, email, password, phone, address } = body
+    const { email, password, firstName, lastName, phone } = body
 
     console.log("Signup attempt for:", email)
 
-    // Validate required fields
-    if (!firstName || !lastName || !email || !password || !phone) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
-    }
-
-    if (password.length < 6) {
-      return NextResponse.json({ error: "Password must be at least 6 characters" }, { status: 400 })
+    if (!email || !password) {
+      return NextResponse.json({ error: "Email and password are required" }, { status: 400 })
     }
 
     // Check if user already exists
@@ -27,28 +32,26 @@ export async function POST(request: NextRequest) {
 
     if (checkError && checkError.code !== "PGRST116") {
       console.error("Error checking existing user:", checkError)
-      return NextResponse.json({ error: "Database error" }, { status: 500 })
+      return NextResponse.json({ error: "Database error occurred" }, { status: 500 })
     }
 
     if (existingUser) {
-      return NextResponse.json({ error: "An account with this email already exists" }, { status: 400 })
+      return NextResponse.json({ error: "User already exists" }, { status: 400 })
     }
 
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 12)
 
     // Create user
-    const { data: user, error } = await supabaseAdmin
+    const { data: newUser, error: insertError } = await supabaseAdmin
       .from("users")
       .insert({
         email,
-        name: `${firstName} ${lastName}`,
+        password_hash: hashedPassword,
         first_name: firstName,
         last_name: lastName,
         phone,
-        address: address || null,
-        password_hash: hashedPassword,
-        email_verified: new Date().toISOString(),
+        name: `${firstName} ${lastName}`,
         profile_completed: true,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -56,36 +59,23 @@ export async function POST(request: NextRequest) {
       .select()
       .single()
 
-    if (error) {
-      console.error("Database error creating user:", error)
-      return NextResponse.json(
-        {
-          error: "Failed to create account",
-          details: error.message,
-        },
-        { status: 500 },
-      )
+    if (insertError) {
+      console.error("Error creating user:", insertError)
+      return NextResponse.json({ error: "Failed to create user account" }, { status: 500 })
     }
 
-    console.log("User created successfully:", user.id)
+    console.log("User created successfully:", newUser.id)
 
     return NextResponse.json({
-      success: true,
       message: "Account created successfully",
       user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
+        id: newUser.id,
+        email: newUser.email,
+        name: newUser.name,
       },
     })
   } catch (error) {
     console.error("Signup error:", error)
-    return NextResponse.json(
-      {
-        error: "Internal server error",
-        details: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500 },
-    )
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

@@ -1,14 +1,14 @@
-import { createClient } from "@supabase/supabase-js"
+import { createClient as createSupabaseClient } from "@supabase/supabase-js"
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
-// Client-side Supabase client (for browser)
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+// Client for browser usage
+export const supabase = createSupabaseClient(supabaseUrl, supabaseAnonKey)
 
-// Server-side Supabase client with service role (for API routes)
-export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey, {
+// Admin client for server-side operations
+export const supabaseAdmin = createSupabaseClient(supabaseUrl, supabaseServiceKey, {
   auth: {
     autoRefreshToken: false,
     persistSession: false,
@@ -103,4 +103,9 @@ export type Database = {
       }
     }
   }
+}
+
+// Function to create a client (for compatibility)
+export function createClient() {
+  return createSupabaseClient(supabaseUrl, supabaseAnonKey)
 }
