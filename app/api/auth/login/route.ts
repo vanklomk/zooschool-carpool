@@ -3,20 +3,13 @@ import bcrypt from "bcryptjs"
 import jwt from "jsonwebtoken"
 import { createClient } from "@supabase/supabase-js"
 
-// Initialize Supabase client with service role key
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-
-const supabase = createClient(supabaseUrl, supabaseServiceKey, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false,
-  },
-})
+const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
+    console.log("Login attempt for:", body.email)
+
     const { email, password } = body
 
     // Validate required fields
@@ -25,56 +18,48 @@ export async function POST(request: NextRequest) {
     }
 
     // Find user by email
-    const { data: user, error: userError } = await supabase
+    const { data: user, error } = await supabase
       .from("users")
-      .select("id, email, password_hash, first_name, last_name, name")
-      .eq("email", email.toLowerCase().trim())
+      .select("id, email, password_hash, name, phone, address, emergency_contact, emergency_phone, created_at")
+      .eq("email", email.toLowerCase())
       .single()
 
-    if (userError || !user) {
+    if (error || !user) {
+      console.log("User not found:", email)
       return NextResponse.json({ error: "Invalid email or password" }, { status: 401 })
     }
 
     // Verify password
     const isValidPassword = await bcrypt.compare(password, user.password_hash)
+
     if (!isValidPassword) {
+      console.log("Invalid password for:", email)
       return NextResponse.json({ error: "Invalid email or password" }, { status: 401 })
     }
 
     // Create JWT token
-    const jwtSecret = process.env.NEXTAUTH_SECRET || "your-secret-key-change-this"
     const token = jwt.sign(
-      {
-        userId: user.id,
-        email: user.email,
-        name: user.name,
-      },
-      jwtSecret,
+      { userId: user.id, email: user.email, name: user.name },
+      process.env.NEXTAUTH_SECRET || "fallback-secret-key",
       { expiresIn: "7d" },
     )
 
+    // Remove password hash from response
+    const { password_hash, ...userWithoutPassword } = user
+
     // Create response
-    const response = NextResponse.json(
-      {
-        success: true,
-        message: "Login successful",
-        user: {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          firstName: user.first_name,
-          lastName: user.last_name,
-        },
-      },
-      { status: 200 },
-    )
+    const response = NextResponse.json({
+      success: true,
+      message: "Login successful",
+      user: userWithoutPassword,
+    })
 
     // Set HTTP-only cookie
     response.cookies.set("auth-token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
-      maxAge: 60 * 60 * 24 * 7, // 7 days
+      maxAge: 7 * 24 * 60 * 60, // 7 days
       path: "/",
     })
 
