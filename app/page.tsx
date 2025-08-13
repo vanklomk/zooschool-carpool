@@ -1,6 +1,6 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Calendar, Car, Clock, Users } from 'lucide-react'
+import { Calendar, Car, Clock, Users } from "lucide-react"
 
 export default function Home() {
   return (
@@ -40,13 +40,19 @@ export default function Home() {
         </div>
       </header>
       <main className="flex-1">
+        {/* Hero Section */}
         <section className="py-12 md:py-24 lg:py-32 bg-gradient-to-b from-white to-emerald-50">
           <div className="container px-4 md:px-6">
             <div className="grid gap-6 lg:grid-cols-2 lg:gap-12 items-center">
               <div className="space-y-4">
-               <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
-  Simplify School Carpooling for Parents 
-</h1>
+                <div className="space-y-2">
+                  <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
+                    Simplify School Carpooling for Parents
+                  </h1>
+                  <p className="text-sm text-emerald-600 font-medium">
+                    ZooSchool, brought to you by VanKlompInnovations Internationale
+                  </p>
+                </div>
                 <p className="text-gray-500 md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
                   ZooSchool makes it easy to organize carpools with other parents. Schedule rides, manage availability,
                   and coordinate with your community to get kids where they need to go.
@@ -74,6 +80,8 @@ export default function Home() {
             </div>
           </div>
         </section>
+
+        {/* How It Works Section */}
         <section className="py-12 md:py-24 lg:py-32 bg-white">
           <div className="container px-4 md:px-6">
             <div className="flex flex-col items-center justify-center space-y-4 text-center">
@@ -114,14 +122,19 @@ export default function Home() {
           </div>
         </section>
       </main>
+
+      {/* Footer */}
       <footer className="bg-gray-100 py-6">
         <div className="container px-4 md:px-6">
           <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
-            <div className="flex items-center gap-2">
-              <Car className="h-5 w-5 text-emerald-600" />
-              <span className="text-lg font-semibold">ZooSchool</span>
+            <div className="flex flex-col items-center md:items-start gap-1">
+              <div className="flex items-center gap-2">
+                <Car className="h-5 w-5 text-emerald-600" />
+                <span className="text-lg font-semibold">ZooSchool</span>
+              </div>
+              <p className="text-xs text-gray-400">by VanKlompInnovations Internationale</p>
             </div>
-            <p className="text-sm text-gray-500">© 2025 ZooSchool. All rights reserved.</p>
+            <p className="text-sm text-gray-500">© 2025 VanKlompInnovations Internationale. All rights reserved.</p>
             <nav className="flex gap-4">
               <Link href="/terms" className="text-sm text-gray-500 hover:underline">
                 Terms
