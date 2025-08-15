@@ -54,6 +54,6 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ trip: data }, { status: 201 });
   } catch (e) {
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json({ error: "Internal server error, tell Keith" }, { status: 500 });
   }
 }
