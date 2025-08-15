@@ -80,6 +80,24 @@ export default function Home() {
             </div>
           </div>
         </section>
+import Link from "next/link";
+
+export default function HomePage() {
+  return (
+    <main className="mx-auto max-w-2xl py-20 px-4">
+      <h2 className="text-2xl font-bold mb-6">Welcome to Zoo School Carpool</h2>
+      <div className="flex gap-4 mb-6">
+        <Link href="/calendar" className="px-6 py-3 bg-blue-600 text-white rounded shadow font-semibold hover:bg-blue-700">
+          View Calendar
+        </Link>
+        <Link href="/create-trip" className="px-6 py-3 bg-green-600 text-white rounded shadow font-semibold hover:bg-green-700">
+          Offer a Ride
+        </Link>
+      </div>
+      {/* existing homepage content */}
+    </main>
+  );
+}
 
         {/* How It Works Section */}
         <section id="how-it-works" className="py-12 md:py-24 lg:py-32 bg-white">
